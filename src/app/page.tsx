@@ -460,7 +460,7 @@ export default function Home() {
             </Card>
 
             {/* 识别结果 */}
-            {(stage === 'transcribing' || originText) && (
+            {(stage === 'recorded' || stage === 'transcribing' || originText) && (
               <Card className="p-6">
                 <div className="flex items-center justify-between mb-3">
                   <h2 className="text-base font-semibold flex items-center gap-2">
@@ -473,7 +473,21 @@ export default function Home() {
                     <Badge variant="secondary">{originText.length} 字</Badge>
                   )}
                 </div>
-                {stage === 'transcribing' ? (
+                {stage === 'recorded' ? (
+                  <div className="py-4">
+                    <p className="text-sm text-muted-foreground mb-4 text-center">
+                      录音已完成（{formatDuration(recorder.duration)}），点击下方按钮开始语音识别
+                    </p>
+                    <Button
+                      onClick={handleTranscribe}
+                      disabled={isBusy}
+                      className="w-full"
+                      size="lg"
+                    >
+                      <AudioLines className="w-4 h-4 mr-2" /> 开始语音识别
+                    </Button>
+                  </div>
+                ) : stage === 'transcribing' ? (
                   <div className="flex items-center gap-2 py-8 justify-center text-muted-foreground">
                     <Loader2 className="w-5 h-5 animate-spin" />
                     <span className="text-sm">{progressMsg || '识别中...'}</span>
