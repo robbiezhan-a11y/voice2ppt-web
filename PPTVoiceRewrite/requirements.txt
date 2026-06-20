@@ -1,0 +1,18 @@
+# PPT 语音 AI 改写工具 V1.1 依赖清单
+# Python 3.10 64-bit 推荐
+#
+# 安装顺序建议：
+#   1. pip install -r requirements.txt
+#   2. pyaudio 若安装失败，使用离线 whl：
+#      pip install PyAudio-0.2.13-cp310-cp310-win_amd64.whl
+#
+# 注：python-pptx 已移除（原版未实际使用）
+#     pycryptodome 用于 API Key 本地 AES 加密存储
+
+PyQt6==6.5.2
+pyaudio==0.2.13
+requests==2.31.0
+pywin32==306
+pycryptodome==3.19.0
+Pillow>=10.0.0
+pyinstaller==6.3.0

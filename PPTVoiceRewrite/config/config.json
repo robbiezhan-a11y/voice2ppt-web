@@ -1,0 +1,6 @@
+{
+  "api_key": "",
+  "model_name": "gpt-3.5-turbo",
+  "last_check_time": 0,
+  "base_url": "https://api.openai.com"
+}
