@@ -23,13 +23,32 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 去掉可能的 data URL 前缀
-    const base64Data = audio.replace(/^data:audio\/\w+;base64,/, '');
+    // 去掉可能的 data URL 前缀（兼容各种 MIME + codecs 参数）
+    // 格式示例：data:audio/webm;base64,xxxx 或 data:audio/webm;codecs=opus;base64,xxxx
+    let base64Data = audio;
+    const dataUrlMatch = audio.match(/^data:[^;]+(?:;[^;]*)*;base64,(.*)$/);
+    if (dataUrlMatch) {
+      base64Data = dataUrlMatch[1];
+    }
 
-    // 校验 base64 有效性
-    if (!/^[A-Za-z0-9+/=]+$/.test(base64Data)) {
+    // 去除可能存在的换行符、空格（部分浏览器/传输会引入）
+    base64Data = base64Data.replace(/\s+/g, '');
+
+    // 校验非空
+    if (!base64Data) {
       return NextResponse.json(
-        { success: false, error: '音频 base64 格式无效' },
+        { success: false, error: '音频 base64 数据为空' },
+        { status: 400 }
+      );
+    }
+
+    // 校验 base64 有效性（允许标准 base64 字符 + = 填充）
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64Data)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `音频 base64 格式无效（前 20 字符：${base64Data.slice(0, 20)}...）`,
+        },
         { status: 400 }
       );
     }
