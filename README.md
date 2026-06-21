@@ -1,148 +1,212 @@
-# PPT 语音 AI 改写工具
+# PPT Voice AI Rewrite Tool
 
-> 🎙️ 录音 → 📝 语音识别 → ✨ AI 改写 → 📊 生成 PPT
+[🌐 中文文档](README_CN.md) | **English**
+
+> 🎙️ Record → 📝 Speech Recognition → ✨ AI Rewrite → 📊 Generate PPT
 >
-> 把口述内容一键转化为结构化的 PowerPoint 演示文稿
+> Turn your spoken words into structured PowerPoint presentations in one click.
 
-本项目提供**两种交付形态**，满足不同场景需求：
+This project delivers **two editions** to serve different scenarios:
 
-| 形态 | 目录 | 适用场景 |
+| Edition | Directory | Use Case |
 |---|---|---|
-| 🌐 **Web 版**（推荐） | `src/` | 跨平台、免安装、浏览器即用，服务端生成 PPT |
-| 🖥️ **桌面版** | `PPTVoiceRewrite/` | Windows 桌面应用，操控本地已打开的 PPT |
+| 🌐 **Web Edition** (Recommended) | `src/` | Cross-platform, zero-install, runs in browser, server-side PPT generation |
+| 🖥️ **Desktop Edition** | `PPTVoiceRewrite/` | Windows desktop app, controls locally opened PPT files |
 
 ---
 
-## 🌐 Web 版（推荐）
+## 🔗 Relationship with OpenAI
 
-基于 Next.js 16 + React 19 + TypeScript 构建，浏览器录音，服务端 AI 处理，生成 .pptx 下载。
+This project is **deeply integrated with OpenAI's API ecosystem**. Understanding this relationship is important before deployment:
 
-### 核心特性
+### Desktop Edition — Direct OpenAI API Integration
 
-- 🎙️ **浏览器原生录音**：MediaRecorder API，实时 VU 电平条 + 录音时长 + 暂停/恢复
-- 📝 **AI 语音识别**：基于 ASR SDK，16kHz 单声道优化，25MB 文件预检
-- ✨ **智能文案改写**：5 种风格预设（精简/正式/通俗/要点/叙事）+ 自定义提示词
-- 📊 **一键生成 PPT**：LLM 自动结构化 + pptxgenjs 生成，3 种模板主题
-- 📱 **响应式设计**：桌面 / 平板 / 手机 均适配
-- 🔒 **隐私友好**：录音在浏览器本地，数据不持久化，无需 API Key
+The desktop edition (`PPTVoiceRewrite/`) **directly calls OpenAI's official API endpoints** and requires users to provide their own OpenAI API key:
 
-### 技术栈
+| Feature | OpenAI API Used | Endpoint |
+|---|---|---|
+| Speech-to-Text | **OpenAI Whisper** (`whisper-1` model) | `POST https://api.openai.com/v1/audio/transcriptions` |
+| Text Rewrite | **OpenAI GPT** (`gpt-3.5-turbo` / `gpt-4` / `gpt-4o` / `gpt-4o-mini`) | `POST https://api.openai.com/v1/chat/completions` |
+| Key Validation | OpenAI Models list (lightweight check) | `GET https://api.openai.com/v1/models` |
 
-| 层 | 技术 |
+**User responsibilities for the desktop edition:**
+1. **Obtain an OpenAI API Key** — Register at [platform.openai.com](https://platform.openai.com/), create an API key (`sk-` prefix), and add billing.
+2. **Keep the key secure** — The key is stored locally with AES-256-CBC encryption, but you must not leak `config/config.json`.
+3. **Pay OpenAI usage fees** — Whisper and GPT calls are billed per use. See [OpenAI Pricing](https://openai.com/pricing).
+4. **Network access required** — Must be able to reach `api.openai.com`. Users in regions with restricted access may configure a custom `base_url` (relay/proxy API) in the key settings dialog.
+
+### Web Edition — Indirect OpenAI-Compatible Integration
+
+The web edition (`src/`) uses the `z-ai-web-dev-sdk`, which provides an **OpenAI-compatible API interface** but routes requests through Z.ai's gateway service instead of OpenAI directly:
+
+```typescript
+// The SDK exposes an OpenAI-style API surface
+import ZAI from 'z-ai-web-dev-sdk';
+const zai = await ZAI.create();
+
+// Speech-to-text (OpenAI Whisper-compatible interface)
+await zai.audio.asr.create({ file_base64 });
+
+// Chat completion (OpenAI GPT-compatible interface)
+await zai.chat.completions.create({ messages, thinking });
+```
+
+**Why this matters:**
+- ✅ **No OpenAI API key needed** for the web edition — the SDK handles authentication server-side.
+- ✅ **OpenAI-compatible interface** — If you want to switch the web edition to use OpenAI directly, just replace the SDK calls with the official `openai` npm package; the request/response shapes are compatible.
+- ⚠️ **Different provider** — The actual model serving the web edition is `glm-4-plus` (Z.ai's model), not OpenAI's GPT. Output style and quality may differ.
+- 💡 **Migrating to OpenAI**: To make the web edition use OpenAI directly, install `openai` package and swap the three API routes (`/api/asr`, `/api/rewrite`, `/api/ppt`) to call `openai.audio.transcriptions.create()` and `openai.chat.completions.create()`.
+
+### OpenAI API Key Application
+
+If you choose the desktop edition or want to migrate the web edition to OpenAI:
+
+1. Visit [platform.openai.com](https://platform.openai.com/)
+2. Sign up / log in
+3. Go to **API Keys** → **Create new secret key**
+4. Copy the `sk-...` key (shown only once)
+5. Add a payment method under **Billing**
+6. Set usage limits under **Usage limits**
+
+> ⚠️ **Security reminder**: Never commit your API key to git. The `.gitignore` already excludes `config/config.json` and `.env` files.
+
+---
+
+## 🌐 Web Edition (Recommended)
+
+Built with Next.js 16 + React 19 + TypeScript. Records audio in the browser, processes via server-side AI, and generates a downloadable `.pptx` file.
+
+### Key Features
+
+- 🎙️ **Native browser recording** — MediaRecorder API with real-time VU meter, duration display, pause/resume
+- 📝 **AI speech recognition** — ASR SDK, 16kHz mono optimized, 25MB file pre-check
+- ✨ **Smart text rewrite** — 5 style presets (concise / formal / casual / keypoints / narrative) + custom prompt
+- 📊 **One-click PPT generation** — LLM auto-structuring + pptxgenjs rendering, 3 template themes
+- 📱 **Responsive design** — Adapts to desktop / tablet / mobile
+- 🔒 **Privacy-friendly** — Audio captured locally in browser, no persistent storage, no API key required
+
+### Tech Stack
+
+| Layer | Technology |
 |---|---|
-| 前端 | Next.js 16, React 19, TypeScript 5, Tailwind CSS 4, shadcn/ui |
-| 录音 | 浏览器 MediaRecorder API + AudioContext (AnalyserNode) |
-| ASR | z-ai-web-dev-sdk `audio.asr.create()` |
-| LLM | z-ai-web-dev-sdk `chat.completions.create()` (glm-4-plus) |
-| PPT 生成 | pptxgenjs 4.0 |
-| 图标 | lucide-react |
+| Frontend | Next.js 16, React 19, TypeScript 5, Tailwind CSS 4, shadcn/ui |
+| Recording | Browser MediaRecorder API + AudioContext (AnalyserNode) |
+| ASR | z-ai-web-dev-sdk `audio.asr.create()` (OpenAI Whisper-compatible) |
+| LLM | z-ai-web-dev-sdk `chat.completions.create()` → `glm-4-plus` (OpenAI GPT-compatible interface) |
+| PPT Generation | pptxgenjs 4.0 |
+| Icons | lucide-react |
 
-### 项目结构
+### Project Structure
 
 ```
 src/
 ├─ app/
-│  ├─ page.tsx              # 主页面（录音 UI + 提示词 + 预览 + 下载）
-│  ├─ layout.tsx            # 根布局
+│  ├─ page.tsx              # Main page (recording UI + prompt + preview + download)
+│  ├─ layout.tsx            # Root layout
 │  └─ api/
-│     ├─ asr/route.ts       # 语音转文字 API
-│     ├─ rewrite/route.ts   # AI 文案改写 API
-│     └─ ppt/route.ts       # PPT 生成 API（LLM 结构化 + pptxgenjs）
+│     ├─ asr/route.ts       # Speech-to-text API
+│     ├─ rewrite/route.ts   # AI text rewrite API
+│     └─ ppt/route.ts       # PPT generation API (LLM structuring + pptxgenjs)
 ├─ hooks/
-│  └─ use-audio-recorder.ts # 浏览器录音 Hook
-└─ components/ui/           # shadcn/ui 组件库
+│  └─ use-audio-recorder.ts # Browser recording hook
+└─ components/ui/           # shadcn/ui component library
 ```
 
-### 快速开始
+### Quick Start
 
 ```bash
-# 安装依赖
-bun install   # 或 npm install
+# Install dependencies
+bun install   # or npm install
 
-# 启动开发服务器
+# Start dev server
 bun run dev   # http://localhost:3000
 
-# 代码检查
+# Lint check
 bun run lint
 ```
 
-### 使用流程
+### Usage Flow
 
-1. 打开网页 → 点击绿色录音按钮 → 授权麦克风 → 口述内容
-2. 点击停止 → 点击「开始语音识别」→ ASR 自动转文字
-3. 可编辑识别结果 → 点击「AI 改写文案」→ LLM 优化文案
-4. 可编辑改写结果 → 点击「生成 PPT」→ 下载 .pptx 文件
+1. Open the page → click the green record button → grant microphone permission → speak
+2. Click stop → click "Start Speech Recognition" → ASR converts audio to text
+3. Edit the recognized text → click "AI Rewrite" → LLM refines the copy
+4. Edit the rewrite result → click "Generate PPT" → download the `.pptx` file
 
 ---
 
-## 🖥️ 桌面版（Windows）
+## 🖥️ Desktop Edition (Windows)
 
-基于 Python + PyQt6 构建，操控本地已打开的 PowerPoint/WPS，批量写入选中幻灯片文本框。
+Built with Python + PyQt6. Controls locally opened PowerPoint/WPS and batch-writes to selected slide text frames.
 
-### 核心特性
+### Key Features
 
-- 🎙️ pyaudio 录音（16K 单声道 wav）
-- 📝 OpenAI Whisper 语音识别
-- ✨ GPT 文案改写（支持中转 API 地址）
-- 📊 win32com 操控已打开 PPT，分段写入选中文本框
-- 🔒 API Key AES-256-CBC 加密存储
-- 📋 历史记录含 PPT 原文备份（可回滚）
-- 📦 PyInstaller + Inno Setup 一键打包安装包
+- 🎙️ pyaudio recording (16kHz mono wav)
+- 📝 **OpenAI Whisper** speech recognition
+- ✨ **OpenAI GPT** text rewrite (supports custom relay API URL)
+- 📊 win32com controls opened PPT, writes to text frames paragraph-by-paragraph
+- 🔒 API Key encrypted with AES-256-CBC
+- 📋 History records include original PPT text backup (rollback support)
+- 📦 PyInstaller + Inno Setup one-click installer packaging
 
-### 目录结构
+### Directory Structure
 
 ```
 PPTVoiceRewrite/
-├─ main.py              # 主程序源码（V1.1，948 行）
-├─ generate_icon.py     # 图标生成脚本
-├─ icon.ico             # 程序图标
-├─ requirements.txt     # Python 依赖清单
-├─ build.bat            # PyInstaller 打包脚本
-├─ install.iss          # Inno Setup 安装包脚本
-├─ config/config.json   # 默认配置
-├─ README.md            # 快速开始
-├─ CHANGELOG.md         # 变更记录
-└─ docs/                # 开发/打包/运维文档
+├─ main.py              # Main source (V1.1, 948 lines)
+├─ generate_icon.py     # Icon generator script
+├─ icon.ico             # App icon
+├─ requirements.txt     # Python dependencies
+├─ build.bat            # PyInstaller packaging script
+├─ install.iss          # Inno Setup installer script
+├─ config/config.json   # Default config
+├─ README.md            # Quick start
+├─ CHANGELOG.md         # Changelog
+└─ docs/                # Dev / packaging / ops docs
 ```
 
-### 快速开始
+### Quick Start
 
 ```cmd
 cd PPTVoiceRewrite
 pip install -r requirements.txt
-python generate_icon.py        # 生成图标
-python main.py                 # 源码运行调试
-build.bat                      # 打包 EXE
-# Inno Setup 打开 install.iss → Ctrl+F9 编译安装包
+python generate_icon.py        # Generate icon
+python main.py                 # Run from source (debug)
+build.bat                      # Package as EXE
+# Open install.iss in Inno Setup → Ctrl+F9 to compile installer
 ```
 
-详见 [`PPTVoiceRewrite/README.md`](PPTVoiceRewrite/README.md)。
+See [`PPTVoiceRewrite/README.md`](PPTVoiceRewrite/README.md) for details.
 
 ---
 
-## 🔄 两种形态对比
+## 🔄 Edition Comparison
 
-| 维度 | Web 版 | 桌面版 |
+| Dimension | Web Edition | Desktop Edition |
 |---|---|---|
-| 跨平台 | ✅ Win/Mac/Linux/手机 | ❌ 仅 Windows |
-| 安装 | 免安装，开网址即用 | 需装 EXE + VC++ 运行库 |
-| 依赖 Office | ❌ 服务端生成 | ✅ 必须装 PowerPoint/WPS |
-| 密钥管理 | 无需（服务端内置） | 用户自配 OpenAI Key |
-| PPT 产出 | 生成全新 .pptx 下载 | 覆盖已打开 PPT 文本框 |
-| 原文备份 | 无 | ✅ 含回滚功能 |
-| 离线使用 | ❌ 需联网 | ❌ 需联网（调 OpenAI） |
+| Cross-platform | ✅ Win/Mac/Linux/Mobile | ❌ Windows only |
+| Installation | Zero-install, open URL | Requires EXE + VC++ runtime |
+| Office dependency | ❌ Server-side generation | ✅ PowerPoint/WPS required |
+| Key management | None (built-in SDK) | User-configured **OpenAI API Key** |
+| PPT output | Generate new `.pptx` download | Overwrite opened PPT text frames |
+| Original backup | No | ✅ Rollback support |
+| Offline use | ❌ Requires internet | ❌ Requires internet (calls OpenAI) |
+| AI provider | Z.ai (glm-4-plus, OpenAI-compatible) | **OpenAI** (Whisper + GPT) |
 
 ---
 
-## 📋 版本历史
+## 📋 Version History
 
-- **Web 版 V1.0**：浏览器录音 + ASR + LLM 改写 + pptxgenjs 生成
-- **桌面版 V1.1**：修复 5 个致命 Bug + 13 项健壮性改进（详见 [CHANGELOG](PPTVoiceRewrite/CHANGELOG.md)）
+- **Web Edition V1.0** — Browser recording + ASR + LLM rewrite + pptxgenjs generation
+- **Desktop Edition V1.1** — Fixed 5 critical bugs + 13 robustness improvements (see [CHANGELOG](PPTVoiceRewrite/CHANGELOG.md))
 
 ---
 
-## 📄 许可
+## 📄 License
 
-本项目源码可自由使用、修改、分发。
+This project's source code is free to use, modify, and distribute.
 
-AI 能力由 z-ai-web-dev-sdk 提供（Web 版）或 OpenAI API 提供（桌面版），需用户自行承担相应服务费用。
+AI capabilities are provided by:
+- **Web Edition**: `z-ai-web-dev-sdk` (Z.ai gateway, OpenAI-compatible interface)
+- **Desktop Edition**: **OpenAI API** (Whisper + GPT, user-supplied key)
+
+Users are responsible for the corresponding service fees of the AI providers they use.
