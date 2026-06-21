@@ -52,3 +52,32 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# ===== PPT 语音 AI 改写工具 项目特定忽略 =====
+
+# 桌面版交付包产物（体积大，不纳入版本控制）
+PPTVoiceRewrite_V1.1_交付包.zip
+PPTVoiceRewrite/build/
+PPTVoiceRewrite/dist/
+PPTVoiceRewrite/spec/
+PPTVoiceRewrite/__pycache__/
+PPTVoiceRewrite/*.pyc
+PPTVoiceRewrite/安装包成品/
+PPTVoiceRewrite/record/*.wav
+PPTVoiceRewrite/history/*.json
+
+# 上传的原始文件（用户私有）
+/upload/
+
+# 下载目录
+/download/
+
+# 数据库文件
+/db/*.db
+/db/*.db-journal
+
+# 临时截图
+screenshot-*.png
+
+# 守护脚本
+dev-guard.sh
